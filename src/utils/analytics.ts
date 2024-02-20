@@ -15,6 +15,7 @@ export class Analytics {
   constructor(opts?: AnalyticsArgs) {
     if (opts?.retention) this.retention = opts.retention;
   }
+
   async track(namespace: string, event: object = {}, opts?: TrackOptions) {
     let key = `analytics::${namespace}`;
 
@@ -24,6 +25,18 @@ export class Analytics {
 
     await redis.hincrby(key, JSON.stringify(event), 1);
     if (!opts?.persist) await redis.expire(key, this.retention);
+  }
+
+  async retrieve(namespace: string, date: string) {
+    const res = await redis.hgetall<Record<string, string>>(
+      `analytics::${namespace}::${date}`
+    );
+    return {
+      date,
+      events: Object.entries(res ?? []).map(([key, value]) => ({
+        [key]: Number(value),
+      })),
+    };
   }
 }
 
